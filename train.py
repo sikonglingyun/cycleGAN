@@ -77,6 +77,12 @@ def model_init(net,input,output,model_path,device):
       model.load_state_dict(param)
   return model
 
+def reset_model_grad(G1,G2,D1,D2):
+  G1.zero_grad() 
+  G2.zero_grad() 
+  D1.zero_grad()
+  D2.zero_grad()
+
 
 def main():
     #もしGPUがあるならGPUを使用してないならCPUを使用
@@ -108,10 +114,7 @@ def main():
             nogi_image = data2.to(device)   # 本物画像
             #------Discriminatorの学習-------
 # ------------------------------------------------------------------------------------------
-            normal2nogi.zero_grad() 
-            nogi2normal.zero_grad() 
-            D_normal.zero_grad()
-            D_nogi.zero_grad()
+            reset_model_grad(normal2nogi,nogi2normal,D_nogi,D_normal)
             
             fake_nogi = normal2nogi(real_image) #生成画像
 
@@ -137,10 +140,7 @@ def main():
             optimizernormal2nogi.step()  # Generatorのパラメータ更新
 # ------------------------------------------------------------------------------------------
             #勾配情報の初期化
-            normal2nogi.zero_grad() 
-            nogi2normal.zero_grad() 
-            D_normal.zero_grad()
-            D_nogi.zero_grad()
+            reset_model_grad(normal2nogi,nogi2normal,D_nogi,D_normal)
 
             fake_normal = nogi2normal(nogi_image) #生成画像
 
@@ -164,17 +164,14 @@ def main():
             optimizernogi2normal.step()  # Generatorのパラメータ更新
             
 #勾配情報の初期化
-            normal2nogi.zero_grad() 
-            nogi2normal.zero_grad() 
-            D_normal.zero_grad()
-            D_nogi.zero_grad()
+            reset_model_grad(normal2nogi,nogi2normal,D_nogi,D_normal)
 
             fake_nogi = normal2nogi(real_image) #生成画像
 
             output = D_nogi(fake_nogi) #生成画像に対するDiscriminatorの結果
 
             adversarial_nogi_loss_fake = criterion2(output,fake_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
-            
+
             output = D_nogi(nogi_image) #生成画像に対するDiscriminatorの結果
 
             adversarial_nogi_loss_real = criterion2(output,real_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
@@ -185,10 +182,7 @@ def main():
           
 # ------------------------------------------------------------------------------------------
             #勾配情報の初期化
-            normal2nogi.zero_grad() 
-            nogi2normal.zero_grad() 
-            D_normal.zero_grad()
-            D_nogi.zero_grad()
+            reset_model_grad(normal2nogi,nogi2normal,D_nogi,D_normal)
 
             fake_normal = nogi2normal(nogi_image) #生成画像
 
