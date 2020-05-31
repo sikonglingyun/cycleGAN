@@ -24,20 +24,18 @@ from torch.nn.utils.spectral_norm import spectral_norm
 from theano.tensor.shared_randomstreams import RandomStreams
 beta1 = 0.5
 cycle_late  = 1 #L1LossとadversarilLossの重要度を決定する係数
-num_epochs = 10 #エポック数
+num_epochs = 1 #エポック数
 batch_size = 1 #バッチサイズ
 learning_rate = 1e-4 #学習率
 train =False#学習を行うかどうかのフラグ
 pretrained =True#事前に学習したモデルがあるならそれを使う
 save_img =True#ネットワークによる生成画像を保存するかどうかのフラグ
 
-import random
 def to_img(x):
     x = 0.5 * (x + 1)
     x = x.clamp(0, 1)
     x = x.view(x.size(0), x.shape[1], x.shape[2],x.shape[3])
     return x
-
 
 #データセットを調整する関数
 transform = transforms.Compose(
@@ -64,11 +62,11 @@ dataset =  Mydatasets("./drive/My Drive/man/sub","./drive/My Drive/woman/sub",tr
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 
-def preserve_result_img(img,filename,epoch):
+def preserve_result_img(img,dir,filename,epoch):
   value = int(math.sqrt(batch_size))
   pic = to_img(img.cpu().data)
   pic = torchvision.utils.make_grid(pic,nrow = value)
-  save_image(pic, filename+'_{}.png'.format(int(epoch)))
+  save_image(pic, dir+'{}'.format(int(epoch))+filename+'.png')
 
 def model_init(net,input,output,model_path,device):
   model = net(input,output).to(device)
@@ -82,7 +80,6 @@ def reset_model_grad(G1,G2,D1,D2):
   G2.zero_grad() 
   D1.zero_grad()
   D2.zero_grad()
-
 
 def main():
     #もしGPUがあるならGPUを使用してないならCPUを使用
@@ -204,19 +201,15 @@ def main():
             fake_normal = nogi2normal(nogi_image) #生成画像
             i=i+1
             if i % 10==0:
-              
               if save_img == True:
-                preserve_result_img(nogi_image,'./drive/My Drive/nogi_image',epoch)
+                preserve_result_img(nogi_image,'./drive/My Drive/result_cycleGAN/','nogi_image',i)
+                preserve_result_img(real_image,'./drive/My Drive/result_cycleGAN/','real_image',i)
+                preserve_result_img(fake_nogi,'./drive/My Drive/result_cycleGAN/','fake_nogi_image',i)
+                preserve_result_img(fake_normal,'./drive/My Drive/result_cycleGAN/','fake_normal',i)
+                preserve_result_img(nogi_normal_nogi,'./drive/My Drive/result_cycleGAN/','nogi_normal_nogi_image',i)
+                preserve_result_img(normal_nogi_normal,'./drive/My Drive/result_cycleGAN/','normal_nogi_normal',i)
 
-                preserve_result_img(real_image,'./drive/My Drive/real_image',epoch)
-                preserve_result_img(fake_nogi,'./drive/My Drive/fake_nogi_image',epoch)
-                preserve_result_img(fake_normal,'./drive/My Drive/fake_normal',epoch)
-                preserve_result_img(nogi_normal_nogi,'./drive/My Drive/nogi_normal_nogi_image',epoch)
-                preserve_result_img(normal_nogi_normal,'./drive/My Drive/normal_nogi_normal',epoch)
-
-              print(i, len(dataloader),loss_g_1,loss_g_2,loss_d_1,loss_d_2)   
-              # if i == 4:break 
-              if train == False and i == 10:break
+              print(i, len(dataloader),loss_g_1,loss_g_2,loss_d_1,loss_d_2)                 
           
         if train == True:
                 #モデルを保存
