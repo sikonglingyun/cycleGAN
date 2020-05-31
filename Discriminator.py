@@ -1,3 +1,6 @@
+import torch
+import torchvision
+from torch import nn
 class Discriminator(nn.Module):
   #Dicriminator部分
   def __init__(self, nch=3, nch_d=16):

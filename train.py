@@ -1,3 +1,70 @@
+import torch
+import torchvision
+import pandas as pd
+import torchvision.datasets as dset
+from torch import nn
+from torch.autograd import Variable
+from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+from torchvision import transforms
+from torchvision.utils import save_image
+from mpl_toolkits.mplot3d import axes3d
+from torchvision.datasets import MNIST
+import os
+import math
+from Mydatasets import Mydatasets
+from Generator import Generator
+from Discriminator import Discriminator
+import theano
+import pylab
+import matplotlib.pyplot as plt
+import random
+import numpy as np
+from torch.nn.utils.spectral_norm import spectral_norm
+from theano.tensor.shared_randomstreams import RandomStreams
+beta1 = 0.5
+cycle_late  = 1 #L1LossとadversarilLossの重要度を決定する係数
+num_epochs = 10 #エポック数
+batch_size = 1 #バッチサイズ
+learning_rate = 1e-4 #学習率
+train =False#学習を行うかどうかのフラグ
+pretrained =True#事前に学習したモデルがあるならそれを使う
+save_img =True#ネットワークによる生成画像を保存するかどうかのフラグ
+
+import random
+def to_img(x):
+    x = 0.5 * (x + 1)
+    x = x.clamp(0, 1)
+    x = x.view(x.size(0), x.shape[1], x.shape[2],x.shape[3])
+    return x
+
+
+#データセットを調整する関数
+transform = transforms.Compose(
+    [transforms.ToTensor(),
+     transforms.Normalize((0.5, ), (0.5, ))])
+   
+#訓練用データセット
+#ここのパスは自分のGoogleDriveのパスに合うように変えてください
+
+
+transform=transforms.Compose([
+                              transforms.RandomResizedCrop(64, scale=(1.0, 1.0), ratio=(1., 1.)),
+                              transforms.RandomHorizontalFlip(),
+                              transforms.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05),
+                              transforms.ToTensor(),
+                              transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                          ])
+
+#データセットをdataoaderで読み込み
+#データセットをdataoaderで読み込み
+
+
+dataset =  Mydatasets("./drive/My Drive/man/sub","./drive/My Drive/woman/sub",transform, transform, True)
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+
+
 def main():
     #もしGPUがあるならGPUを使用してないならCPUを使用
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

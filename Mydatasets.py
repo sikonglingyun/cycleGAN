@@ -1,5 +1,9 @@
 #訓練用データセット
 #ここのパスは自分のGoogleDriveのパスに合うように変えてください
+
+from torch.utils.data import Dataset
+from PIL import Image
+import os
 class Mydatasets(Dataset):
     def __init__(self, path1,path2, transform1 = None, transform2 = None, train = True):
         self.transform1 = transform1

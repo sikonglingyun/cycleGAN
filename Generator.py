@@ -1,3 +1,6 @@
+import torch
+import torchvision
+from torch import nn
 class Generator(nn.Module):
     def __init__(self,nch,nch_d):
         super(Generator, self).__init__()
