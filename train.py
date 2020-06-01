@@ -11,11 +11,15 @@ from Discriminator import Discriminator
 
 beta1 = 0.5
 cycle_late  = 1 #L1LossとadversarilLossの重要度を決定する係数
-num_epochs = 1 #エポック数
+num_epochs = 10 #エポック数
 batch_size = 1 #バッチサイズ
 learning_rate = 1e-4 #学習率
-pretrained =True#事前に学習したモデルがあるならそれを使う
+pretrained =False#事前に学習したモデルがあるならそれを使う
+model_file_name_list = ['G1','G2','D1','D2']
 save_img =True#ネットワークによる生成画像を保存するかどうかのフラグ
+file_path_image1 = "./drive/My Drive/man/sub"
+file_path_image2 = "./drive/My Drive/woman/sub"
+project_root = './drive/My Drive/result_cycleGAN/'
 
 def to_img(x):
     x = 0.5 * (x + 1)
@@ -44,141 +48,112 @@ def reset_model_grad(G1,G2,D1,D2):
 
 def main():
         
-    dataset =  Mydatasets("./drive/My Drive/man/sub","./drive/My Drive/woman/sub", True)
+    dataset =  Mydatasets(file_path_image1, file_path_image1)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     #もしGPUがあるならGPUを使用してないならCPUを使用
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    normal2nogi = model_init(Generator,3,3,'./drive/My Drive/result_cycleGAN/normal2nogi.pth',device)
-    nogi2normal = model_init(Generator,3,3,'./drive/My Drive/result_cycleGAN/nogi2normal.pth',device)
-    D_nogi = model_init(Discriminator,3,64,'./drive/My Drive/result_cycleGAN/D_nogi.pth',device)
-    D_normal = model_init(Discriminator,3,64,'./drive/My Drive/result_cycleGAN/D_normal.pth',device)
+    G1 = model_init(Generator,3,3,project_root+model_file_name_list[0]+'.pth',device)
+    G2 = model_init(Generator,3,3,project_root+model_file_name_list[1]+'.pth',device)
+    D1 = model_init(Discriminator,3,64,project_root+model_file_name_list[2]]+'.pth',device)
+    D2 = model_init(Discriminator,3,64,project_root+model_file_name_list[3]+'.pth',device)
 
-    criterion = nn.L1Loss()
-    criterion2 = nn.MSELoss()
-    
-    optimizerD_nogi = torch.optim.Adam(D_nogi.parameters(), lr=learning_rate, betas=(beta1, 0.999), weight_decay=1e-5) 
-    optimizernogi2normal = torch.optim.Adam(nogi2normal.parameters(), lr=learning_rate, betas=(beta1, 0.999), weight_decay=1e-5) 
-    optimizerD_normal = torch.optim.Adam(D_normal.parameters(), lr=learning_rate, betas=(beta1, 0.999), weight_decay=1e-5) 
-    optimizernormal2nogi = torch.optim.Adam(normal2nogi.parameters(), lr=learning_rate, betas=(beta1, 0.999), weight_decay=1e-5) 
+    L1Loss = nn.L1Loss()
+    MSELoss = nn.MSELoss()
+
+    optimizerG1 = torch.optim.Adam(G1.parameters(), lr=learning_rate, betas=(beta1, 0.999), weight_decay=1e-5) 
+    optimizerD2 = torch.optim.Adam(D2.parameters(), lr=learning_rate, betas=(beta1, 0.999), weight_decay=1e-5) 
+    optimizerD1 = torch.optim.Adam(D1.parameters(), lr=learning_rate, betas=(beta1, 0.999), weight_decay=1e-5) 
+    optimizerG2 = torch.optim.Adam(G2.parameters(), lr=learning_rate, betas=(beta1, 0.999), weight_decay=1e-5) 
   
     for epoch in range(num_epochs):
         print(epoch)
         itr=0
         for data,data2 in dataloader:
             itr=itr+1
-            real_image = data.to(device)   # 本物画像
-            sample_size = real_image.size(0)  # 画像枚数
+            image1 = data.to(device)   # 本物画像
+            image2 = data2.to(device)   # 本物画像
+            sample_size = image1.size(0)  # 画像枚数
             real_target = torch.full((sample_size,1,1), random.uniform(1, 1), device=device)   # 本物ラベル
             fake_target = torch.full((sample_size,1,1), random.uniform(0, 0), device=device)   # 偽物ラベル
             
-            nogi_image = data2.to(device)   # 本物画像
             #------Discriminatorの学習-------
-# ------------------------------------------------------------------------------------------
-            reset_model_grad(normal2nogi,nogi2normal,D_nogi,D_normal)
+            reset_model_grad(G2,G1,D2,D1)
             
-            fake_nogi = normal2nogi(real_image) #生成画像
+            fake_image2 = G2(image1) #生成画像            
+            output = D2(fake_image2) #生成画像に対するDiscriminatorの結果
+            adversarial_nogi_loss_fake = MSELoss(output,real_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
 
-            
-            output = D_nogi(fake_nogi) #生成画像に対するDiscriminatorの結果
-            
-            adversarial_nogi_loss_fake = criterion2(output,real_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
+            image1_image2_image1 = G1(fake_image2)
+            image2_image1_image2 = G2(G1(image2)) #生成画像)
+            loss_image1_image2_image1 = L1Loss(image1_image2_image1,image1)
+            loss_image2_image1_image2 =L1Loss(image2_image1_image2,image2)
 
-            normal_nogi_normal = nogi2normal(fake_nogi)
+            identify_normal =L1Loss(G2(image2),image2)
 
-            nogi_normal_nogi = normal2nogi(nogi2normal(nogi_image)) #生成画像)
-
-            loss_normal_nogi_normal = criterion(normal_nogi_normal,real_image)
-
-            loss_nogi_normal_nogi =criterion(nogi_normal_nogi,nogi_image)
-
-            identify_normal =criterion(normal2nogi(nogi_image),nogi_image)
-
-            loss_g_1 =identify_normal *cycle_late+loss_nogi_normal_nogi*cycle_late+ adversarial_nogi_loss_fake + loss_normal_nogi_normal*cycle_late #二つの損失をバランスを考えて加算
-            
-            loss_g_1.backward(retain_graph = True) # 誤差逆伝播
-            
-            optimizernormal2nogi.step()  # Generatorのパラメータ更新
-# ------------------------------------------------------------------------------------------
-            #勾配情報の初期化
-            reset_model_grad(normal2nogi,nogi2normal,D_nogi,D_normal)
-
-            fake_normal = nogi2normal(nogi_image) #生成画像
-
-            output = D_normal(fake_normal) #生成画像に対するDiscriminatorの結果
-            
-            adversarial_normal_loss_fake = criterion2(output,real_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
-
-            nogi_normal_nogi = normal2nogi(fake_normal)
-
-            normal_nogi_normal = nogi2normal(normal2nogi(real_image))
-
-            loss_nogi_normal_nogi = criterion(nogi_normal_nogi,nogi_image)
-
-            loss_normal_nogi_normal =criterion(normal_nogi_normal,real_image)
-
-            identify_nogi = criterion(nogi2normal(real_image),real_image)
-
-            loss_g_2 =identify_nogi *cycle_late+loss_normal_nogi_normal*cycle_late+adversarial_normal_loss_fake+ loss_nogi_normal_nogi*cycle_late #二つの損失をバランスを考えて加算
-            
+            loss_g_2 =identify_normal *cycle_late+loss_image2_image1_image2*cycle_late+ adversarial_nogi_loss_fake + loss_image1_image2_image1*cycle_late #二つの損失をバランスを考えて加算
             loss_g_2.backward(retain_graph = True) # 誤差逆伝播
-            optimizernogi2normal.step()  # Generatorのパラメータ更新
+            optimizerG2.step()  # Generatorのパラメータ更新
+
+            reset_model_grad(G2,G1,D2,D1) #勾配情報の初期化
+
+            fake_image1 = G1(image2) #生成画像
+            output = D1(fake_image1) #生成画像に対するDiscriminatorの結果
+            adversarial_normal_loss_fake = MSELoss(output,real_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
+
+            image2_image1_image2 = G2(fake_image1)
+            image1_image2_image1 = G1(G2(image1))
+
+            loss_image2_image1_image2 = L1Loss(image2_image1_image2,image2)
+            loss_image1_image2_image1 =L1Loss(image1_image2_image1,image1)
+
+            identify_nogi = L1Loss(G1(image1),image1)
+
+            loss_g_1 =identify_nogi *cycle_late+loss_image1_image2_image1*cycle_late+adversarial_normal_loss_fake+ loss_image2_image1_image2*cycle_late #二つの損失をバランスを考えて加算
+            loss_g_1.backward(retain_graph = True) # 誤差逆伝播
+            optimizerG1.step()  # Generatorのパラメータ更新
             
-#勾配情報の初期化
-            reset_model_grad(normal2nogi,nogi2normal,D_nogi,D_normal)
+            reset_model_grad(G2,G1,D2,D1)#勾配情報の初期化
 
-            fake_nogi = normal2nogi(real_image) #生成画像
+            fake_image2 = G2(image1) #生成画像
+            output = D2(fake_image2) #生成画像に対するDiscriminatorの結果
+            adversarial_nogi_loss_fake = MSELoss(output,fake_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
 
-            output = D_nogi(fake_nogi) #生成画像に対するDiscriminatorの結果
+            output = D2(image2) #生成画像に対するDiscriminatorの結果
+            adversarial_nogi_loss_real = MSELoss(output,real_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
 
-            adversarial_nogi_loss_fake = criterion2(output,fake_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
-
-            output = D_nogi(nogi_image) #生成画像に対するDiscriminatorの結果
-
-            adversarial_nogi_loss_real = criterion2(output,real_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
-
-            loss_d_1 = (adversarial_nogi_loss_fake+adversarial_nogi_loss_real)*1#単純に加算
-            loss_d_1.backward(retain_graph = True) # 誤差逆伝播
-            optimizerD_nogi.step()  # Discriminatorのパラメータ更新
-          
-# ------------------------------------------------------------------------------------------
-            #勾配情報の初期化
-            reset_model_grad(normal2nogi,nogi2normal,D_nogi,D_normal)
-
-            fake_normal = nogi2normal(nogi_image) #生成画像
-
-            output = D_normal(fake_normal) #生成画像に対するDiscriminatorの結果
-            
-            adversarial_normal_loss_fake = criterion2(output,fake_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
-           
-            output = D_normal(real_image) #生成画像に対するDiscriminatorの結果
-
-            adversarial_normal_loss_real = criterion2(output,real_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
-
-
-            loss_d_2 =  (adversarial_normal_loss_fake+adversarial_normal_loss_real)*1#単純に加算
+            loss_d_2 = (adversarial_nogi_loss_fake+adversarial_nogi_loss_real)*1#単純に加算
             loss_d_2.backward(retain_graph = True) # 誤差逆伝播
-            optimizerD_normal.step()  # Discriminatorのパラメータ更新
-            
-# ------------------------------------------------------------------------------------------
-            fake_nogi = normal2nogi(real_image) #生成画像
-            fake_normal = nogi2normal(nogi_image) #生成画像
-            
-            if itr % 10==0:
-              if save_img == True:
-                preserve_result_img(nogi_image,'./drive/My Drive/result_cycleGAN/','nogi_image',itr)
-                preserve_result_img(real_image,'./drive/My Drive/result_cycleGAN/','real_image',itr)
-                preserve_result_img(fake_nogi,'./drive/My Drive/result_cycleGAN/','fake_nogi_image',itr)
-                preserve_result_img(fake_normal,'./drive/My Drive/result_cycleGAN/','fake_normal',itr)
-                preserve_result_img(nogi_normal_nogi,'./drive/My Drive/result_cycleGAN/','nogi_normal_nogi_image',itr)
-                preserve_result_img(normal_nogi_normal,'./drive/My Drive/result_cycleGAN/','normal_nogi_normal',itr)
-              print(itr, len(dataloader),loss_g_1,loss_g_2,loss_d_1,loss_d_2)                 
+            optimizerD2.step()  # Discriminatorのパラメータ更新
 
+            #勾配情報の初期化
+            reset_model_grad(G2,G1,D2,D1)
+
+            fake_image1 = G1(image2) #生成画像
+            output = D1(fake_image1) #生成画像に対するDiscriminatorの結果
+            adversarial_normal_loss_fake = MSELoss(output,fake_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
+           
+            output = D1(image1) #生成画像に対するDiscriminatorの結果
+            adversarial_normal_loss_real = MSELoss(output,real_target) #Discriminatorの出力結果と正解ラベルとのBCELoss
+
+            loss_d_1 =  (adversarial_normal_loss_fake+adversarial_normal_loss_real)*1#単純に加算
+            loss_d_1.backward(retain_graph = True) # 誤差逆伝播
+            optimizerD1.step()  # Discriminatorのパラメータ更新
+
+            fake_image2 = G2(image1) #生成画像
+            fake_image1 = G1(image2) #生成画像
+            img_list           = [ image1 , image2 , fake_image1 , fake_image2 , image1_image2_image1 , image2_image1_image2 ]
+            img_file_name_list = ['image1','image1','fake_image1','fake_image2','image1_image2_image1','image2_image1_image2']
+            
+            print(epoch,itr, len(dataloader),loss_g_1,loss_g_2,loss_d_1,loss_d_2)
+            if itr % 10==0 and save_img == True:
+              for i in range(len(img_list)):
+                preserve_result_img(img_list[i],project_root,img_file_name_list[i],itr)
+                               
         #モデルを保存
-        torch.save(nogi2normal.state_dict(), './drive/My Drive/nogi2normal.pth')
-        torch.save(normal2nogi.state_dict(), './drive/My Drive/normal2nogi.pth')
-        torch.save(D_nogi.state_dict(), './drive/My Drive/D_nogi.pth')
-        torch.save(D_normal.state_dict(), './drive/My Drive/D_normal.pth')
+        model_list = [ G1 , G2 , D1 , D2 ]
+        for i in range(len(img_list)):
+          torch.save(model_init[i].state_dict(), project_root+model_file_name_list[i]+'.pth')
     
 if __name__ == '__main__':
     main() 

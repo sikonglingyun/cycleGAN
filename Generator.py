@@ -33,54 +33,40 @@ class Generator(nn.Module):
 
     def forward(self, z):
         z,z1 = self.convolution_forward(self.layer1,z)
-        z, _ = self.convolution(self.Res1,z)
-        z = z+z1
-        z = z/2
-        z1 = z
+        z,z1 = self.ResNet(self.Res1,z,z1)
+        
         z,z2= self.convolution_forward(self.layer2,z)
-        z,_ = self.convolution(self.Res2,z)
-        z = z+z2
-        z = z/2
-        z2 = z
+        z,z2 = self.ResNet(self.Res2,z,z2)
+
         z,z3 = self.convolution_forward(self.layer3,z)
-        z,_ = self.convolution(self.Res3,z)
-        z = z+z3
-        z = z/2
-        z3 = z
+        z,z3 = self.ResNet(self.Res3,z,z3)
+
         z,z4 = self.convolution_forward(self.layer4,z)
-        z,_ = self.convolution(self.Res4,z)
-        z = z+z4
-        z = z/2
-        z4 = z
+        z,z4 = self.ResNet(self.Res4,z,z4)
+
         z,z5 = self.convolution_forward(self.layer5,z)
-        z,_ = self.convolution(self.Res5,z)
-        z = z+z5
-        z = z/2
-        z5 = z
+        z,z5 = self.ResNet(self.Res5,z,z5)
+
         z,_ = self.convolution(self.layer6,z)
-        z = self.convolution_deconv(self.layer7,z,z5)
-        z,z_copy = self.convolution(self.Res7,z)
-        z = z+z_copy
-        z = z/2
-        z = self.convolution_deconv(self.layer8,z,z4)
-        z,z_copy = self.convolution(self.Res8,z)
-        z = z+z_copy
-        z = z/2
-        z = self.convolution_deconv(self.layer9,z,z3)
-        z,z_copy = self.convolution(self.Res9,z)
-        z = z+z_copy
-        z = z/2
-        z = self.convolution_deconv(self.layer10,z,z2)
-        z,z_copy = self.convolution(self.Res10,z)
-        z = z+z_copy
-        z = z/2
-        z = self.convolution_deconv(self.layer11,z,z1)
-        z,z_copy = self.convolution(self.Res11,z)
-        z = z+z_copy
-        z = z/2
-        z,_ = self.convolution(self.layer12,z)
-        z,z_copy = self.convolution(self.Res12,z)
-        z = z+z_copy
+
+        z,z_copy = self.convolution_deconv(self.layer7,z,z5)
+        z,_ = self.ResNet(self.Res7,z,z_copy)
+
+        z,z_copy = self.convolution_deconv(self.layer8,z,z4)
+        z,_ = self.ResNet(self.Res8,z,z_copy)
+
+        z,z_copy = self.convolution_deconv(self.layer9,z,z3)
+        z,_ = self.ResNet(self.Res9,z,z_copy)
+
+        z,z_copy = self.convolution_deconv(self.layer10,z,z2)
+        z,_ = self.ResNet(self.Res10,z,z_copy)
+
+        z,z_copy = self.convolution_deconv(self.layer11,z,z1)
+        z,_ = self.ResNet(self.Res11,z,z_copy)
+
+        z,z_copy = self.convolution(self.layer12,z)
+        z,_ = self.ResNet(self.Res12,z,z_copy)
+
         z,_ = self.convolution(self.layer13,z)
         return z
 
@@ -89,6 +75,11 @@ class Generator(nn.Module):
             z = layer(z)
       z_copy = z
       return z,z_copy
+    def ResNet(self,layer,z,pre_z):
+        z, _ = self.convolution(layer,z)
+        z = z+pre_z
+        z_copy = z
+        return z,z_copy
 
     def Residual_module(self,input):
       return nn.ModuleDict({
@@ -157,4 +148,5 @@ class Generator(nn.Module):
     def convolution_deconv(self,layer,z,z_copy):
         z,_ = self.convolution(layer,z)
         z = torch.cat([z,z_copy],dim = 1)
-        return z
+        z_copy = z
+        return z,z_copy
