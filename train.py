@@ -46,16 +46,18 @@ def reset_model_grad(G1,G2,D1,D2):
   D1.zero_grad()
   D2.zero_grad()
 
+
+
 def main():
         
-    dataset =  Mydatasets(file_path_image1, file_path_image1)
+    dataset =  Mydatasets(file_path_image1, file_path_image2)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     #もしGPUがあるならGPUを使用してないならCPUを使用
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     G1 = model_init(Generator,3,3,project_root+model_file_name_list[0]+'.pth',device)
     G2 = model_init(Generator,3,3,project_root+model_file_name_list[1]+'.pth',device)
-    D1 = model_init(Discriminator,3,64,project_root+model_file_name_list[2]]+'.pth',device)
+    D1 = model_init(Discriminator,3,64,project_root+model_file_name_list[2]+'.pth',device)
     D2 = model_init(Discriminator,3,64,project_root+model_file_name_list[3]+'.pth',device)
 
     L1Loss = nn.L1Loss()
@@ -142,8 +144,8 @@ def main():
 
             fake_image2 = G2(image1) #生成画像
             fake_image1 = G1(image2) #生成画像
-            img_list           = [ image1 , image2 , fake_image1 , fake_image2 , image1_image2_image1 , image2_image1_image2 ]
-            img_file_name_list = ['image1','image1','fake_image1','fake_image2','image1_image2_image1','image2_image1_image2']
+            img_list       = [ image1 , image2 , fake_image1 , fake_image2 , image1_image2_image1 , image2_image1_image2 ]
+            img_file_name_list = ['image1','image2','fake_image1','fake_image2','image1_image2_image1','image2_image1_image2']
             
             print(epoch,itr, len(dataloader),loss_g_1,loss_g_2,loss_d_1,loss_d_2)
             if itr % 10==0 and save_img == True:
