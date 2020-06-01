@@ -155,7 +155,7 @@ def main():
         #モデルを保存
         model_list = [ G1 , G2 , D1 , D2 ]
         for i in range(len(img_list)):
-          torch.save(model_init[i].state_dict(), project_root+model_file_name_list[i]+'.pth')
+          torch.save(model_list[i].state_dict(), project_root+model_file_name_list[i]+'.pth')
     
 if __name__ == '__main__':
     main() 
