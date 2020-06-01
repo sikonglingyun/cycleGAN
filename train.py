@@ -2,7 +2,6 @@ import torch
 import torchvision
 from torch import nn
 from torch.utils.data import DataLoader
-from torchvision import transforms
 from torchvision.utils import save_image
 import math
 import random
@@ -15,7 +14,6 @@ cycle_late  = 1 #L1LossとadversarilLossの重要度を決定する係数
 num_epochs = 1 #エポック数
 batch_size = 1 #バッチサイズ
 learning_rate = 1e-4 #学習率
-train =False#学習を行うかどうかのフラグ
 pretrained =True#事前に学習したモデルがあるならそれを使う
 save_img =True#ネットワークによる生成画像を保存するかどうかのフラグ
 
@@ -24,31 +22,6 @@ def to_img(x):
     x = x.clamp(0, 1)
     x = x.view(x.size(0), x.shape[1], x.shape[2],x.shape[3])
     return x
-
-#データセットを調整する関数
-transform = transforms.Compose(
-    [transforms.ToTensor(),
-     transforms.Normalize((0.5, ), (0.5, ))])
-   
-#訓練用データセット
-#ここのパスは自分のGoogleDriveのパスに合うように変えてください
-
-
-transform=transforms.Compose([
-                              transforms.RandomResizedCrop(64, scale=(1.0, 1.0), ratio=(1., 1.)),
-                              transforms.RandomHorizontalFlip(),
-                              transforms.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05),
-                              transforms.ToTensor(),
-                              transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                          ])
-
-#データセットをdataoaderで読み込み
-#データセットをdataoaderで読み込み
-
-
-dataset =  Mydatasets("./drive/My Drive/man/sub","./drive/My Drive/woman/sub",transform, transform, True)
-dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
 
 def preserve_result_img(img,dir,filename,epoch):
   value = int(math.sqrt(batch_size))
@@ -70,6 +43,9 @@ def reset_model_grad(G1,G2,D1,D2):
   D2.zero_grad()
 
 def main():
+        
+    dataset =  Mydatasets("./drive/My Drive/man/sub","./drive/My Drive/woman/sub", True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     #もしGPUがあるならGPUを使用してないならCPUを使用
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -88,9 +64,9 @@ def main():
   
     for epoch in range(num_epochs):
         print(epoch)
-        i=0
+        itr=0
         for data,data2 in dataloader:
-            
+            itr=itr+1
             real_image = data.to(device)   # 本物画像
             sample_size = real_image.size(0)  # 画像枚数
             real_target = torch.full((sample_size,1,1), random.uniform(1, 1), device=device)   # 本物ラベル
@@ -187,26 +163,22 @@ def main():
 # ------------------------------------------------------------------------------------------
             fake_nogi = normal2nogi(real_image) #生成画像
             fake_normal = nogi2normal(nogi_image) #生成画像
-            i=i+1
-            if i % 10==0:
+            
+            if itr % 10==0:
               if save_img == True:
-                preserve_result_img(nogi_image,'./drive/My Drive/result_cycleGAN/','nogi_image',i)
-                preserve_result_img(real_image,'./drive/My Drive/result_cycleGAN/','real_image',i)
-                preserve_result_img(fake_nogi,'./drive/My Drive/result_cycleGAN/','fake_nogi_image',i)
-                preserve_result_img(fake_normal,'./drive/My Drive/result_cycleGAN/','fake_normal',i)
-                preserve_result_img(nogi_normal_nogi,'./drive/My Drive/result_cycleGAN/','nogi_normal_nogi_image',i)
-                preserve_result_img(normal_nogi_normal,'./drive/My Drive/result_cycleGAN/','normal_nogi_normal',i)
+                preserve_result_img(nogi_image,'./drive/My Drive/result_cycleGAN/','nogi_image',itr)
+                preserve_result_img(real_image,'./drive/My Drive/result_cycleGAN/','real_image',itr)
+                preserve_result_img(fake_nogi,'./drive/My Drive/result_cycleGAN/','fake_nogi_image',itr)
+                preserve_result_img(fake_normal,'./drive/My Drive/result_cycleGAN/','fake_normal',itr)
+                preserve_result_img(nogi_normal_nogi,'./drive/My Drive/result_cycleGAN/','nogi_normal_nogi_image',itr)
+                preserve_result_img(normal_nogi_normal,'./drive/My Drive/result_cycleGAN/','normal_nogi_normal',itr)
+              print(itr, len(dataloader),loss_g_1,loss_g_2,loss_d_1,loss_d_2)                 
 
-              print(i, len(dataloader),loss_g_1,loss_g_2,loss_d_1,loss_d_2)                 
-          
-        if train == True:
-                #モデルを保存
-                torch.save(nogi2normal.state_dict(), './drive/My Drive/nogi2normal.pth')
-                torch.save(normal2nogi.state_dict(), './drive/My Drive/normal2nogi.pth')
-                torch.save(D_nogi.state_dict(), './drive/My Drive/D_nogi.pth')
-                torch.save(D_normal.state_dict(), './drive/My Drive/D_normal.pth')
-
-                #ここのパスは自分のGoogleDriveのパスに合うように変えてください
+        #モデルを保存
+        torch.save(nogi2normal.state_dict(), './drive/My Drive/nogi2normal.pth')
+        torch.save(normal2nogi.state_dict(), './drive/My Drive/normal2nogi.pth')
+        torch.save(D_nogi.state_dict(), './drive/My Drive/D_nogi.pth')
+        torch.save(D_normal.state_dict(), './drive/My Drive/D_normal.pth')
     
 if __name__ == '__main__':
     main() 
