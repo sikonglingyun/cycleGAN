@@ -1,27 +1,15 @@
 import torch
 import torchvision
-import pandas as pd
-import torchvision.datasets as dset
 from torch import nn
-from torch.autograd import Variable
-from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.utils import save_image
-from mpl_toolkits.mplot3d import axes3d
-from torchvision.datasets import MNIST
-import os
 import math
+import random
 from Mydatasets import Mydatasets
 from Generator import Generator
 from Discriminator import Discriminator
-import theano
-import pylab
-import matplotlib.pyplot as plt
-import random
-import numpy as np
-from torch.nn.utils.spectral_norm import spectral_norm
-from theano.tensor.shared_randomstreams import RandomStreams
+
 beta1 = 0.5
 cycle_late  = 1 #L1LossとadversarilLossの重要度を決定する係数
 num_epochs = 1 #エポック数
@@ -85,10 +73,10 @@ def main():
     #もしGPUがあるならGPUを使用してないならCPUを使用
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    normal2nogi = model_init(Generator,3,3,'./drive/My Drive/normal2nogi.pth',device)
-    nogi2normal = model_init(Generator,3,3,'./drive/My Drive/nogi2normal.pth',device)
-    D_nogi = model_init(Discriminator,3,64,'./drive/My Drive/D_nogi.pth',device)
-    D_normal = model_init(Discriminator,3,64,'./drive/My Drive/D_normal.pth',device)
+    normal2nogi = model_init(Generator,3,3,'./drive/My Drive/result_cycleGAN/normal2nogi.pth',device)
+    nogi2normal = model_init(Generator,3,3,'./drive/My Drive/result_cycleGAN/nogi2normal.pth',device)
+    D_nogi = model_init(Discriminator,3,64,'./drive/My Drive/result_cycleGAN/D_nogi.pth',device)
+    D_normal = model_init(Discriminator,3,64,'./drive/My Drive/result_cycleGAN/D_normal.pth',device)
 
     criterion = nn.L1Loss()
     criterion2 = nn.MSELoss()
