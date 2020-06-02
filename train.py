@@ -15,7 +15,8 @@ num_epochs = 10 #エポック数
 batch_size = 1 #バッチサイズ
 learning_rate = 1e-4 #学習率
 pretrained =False#事前に学習したモデルがあるならそれを使う
-model_file_name_list = ['G1','G2','D1','D2']
+pretrained_model_file_name_list = ['G1_master','G2_master','D1_master','D2_master']
+output_model_file_name_list    = ['G1','G2','D1','D2']
 save_img =True#ネットワークによる生成画像を保存するかどうかのフラグ
 file_path_image1 = "./drive/My Drive/man/sub"
 file_path_image2 = "./drive/My Drive/woman/sub"
@@ -55,10 +56,10 @@ def main():
     #もしGPUがあるならGPUを使用してないならCPUを使用
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    G1 = model_init(Generator,3,3,project_root+model_file_name_list[0]+'.pth',device)
-    G2 = model_init(Generator,3,3,project_root+model_file_name_list[1]+'.pth',device)
-    D1 = model_init(Discriminator,3,64,project_root+model_file_name_list[2]+'.pth',device)
-    D2 = model_init(Discriminator,3,64,project_root+model_file_name_list[3]+'.pth',device)
+    G1 = model_init(Generator,3,3,project_root+pretrained_model_file_name_list[0]+'.pth',device)
+    G2 = model_init(Generator,3,3,project_root+pretrained_model_file_name_list[1]+'.pth',device)
+    D1 = model_init(Discriminator,3,64,project_root+pretrained_model_file_name_list[2]+'.pth',device)
+    D2 = model_init(Discriminator,3,64,project_root+pretrained_model_file_name_list[3]+'.pth',device)
 
     L1Loss = nn.L1Loss()
     MSELoss = nn.MSELoss()
@@ -155,7 +156,7 @@ def main():
         #モデルを保存
         model_list = [ G1 , G2 , D1 , D2 ]
         for i in range(len(model_list)):
-          torch.save(model_list[i].state_dict(), project_root+model_file_name_list[i]+'.pth')
+          torch.save(model_list[i].state_dict(), project_root+output_model_file_name_list[i]+'.pth')
     
 if __name__ == '__main__':
     main() 
